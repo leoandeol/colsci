@@ -39,11 +39,12 @@
   overflow: auto;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   background-color: #e0e0e0;
+  padding: 20px;
 }
 
-.canvas-container {
+.pdf-viewer__main .react-pdf__Document {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   background-color: white;
 }
@@ -85,7 +86,29 @@
   cursor: not-allowed;
 }
 
-.page-info {
+.controls p {
   font-size: 16px;
   color: #333;
+}
+
+/* Ensure the PDF page is responsive */
+.react-pdf__Page {
+  max-width: 100%;
+  height: auto !important;
+}
+
+.react-pdf__Page__canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+/* Add this to your existing CSS */
+.error-message {
+  color: red;
+  text-align: center;
+  padding: 20px;
+  background-color: #ffeeee;
+  border: 1px solid #ffcccc;
+  border-radius: 4px;
+  margin: 20px 0;
 }

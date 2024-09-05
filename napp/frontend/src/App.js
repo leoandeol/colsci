@@ -1,117 +1,60 @@
-import React, { useRef, useEffect, useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.entry';
+import React, { useState } from 'react';
+import { Document, Page } from 'react-pdf';
+import { pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 import './App.css';
 
+// Set worker path
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url,
+).toString();
+
 function App() {
-    const canvasRef = useRef(null);
-    const [pdfDoc, setPdfDoc] = useState(null);
-    const [pageNum, setPageNum] = useState(1);
-    const [pageIsRendering, setPageIsRendering] = useState(false);
-    const [pageNumIsPending, setPageNumIsPending] = useState(null);
-    const [selectedFile, setSelectedFile] = useState(null);
-    const scale = 1.5;
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (selectedFile) {
-      loadPdf(selectedFile);
-    }
-  }, [selectedFile]);
+  function onDocumentLoadSuccess({ numPages }) {
+    setNumPages(numPages);
+    setPageNumber(1);
+    setError(null);
+  }
 
-  const loadPdf = async (file) => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      console.log('PDF loaded successfully. Number of pages:', pdf.numPages);
-      setPdfDoc(pdf);
-      setPageNum(1);
-    } catch (error) {
-      console.error('Error loading PDF:', error);
-    }
-  };
+  function onDocumentLoadError(error) {
+    console.error('Error while loading document! ', error.message);
+    setError(`Error: ${error.message}`);
+  }
 
-  useEffect(() => {
-    if (pdfDoc) {
-      renderPage(pageNum);
-    }
-  }, [pdfDoc, pageNum]);
+  function changePage(offset) {
+    setPageNumber(prevPageNumber => prevPageNumber + offset);
+  }
 
-  const renderPage = async (num) => {
-    if (!pdfDoc) {
-      console.log('PDF document not loaded yet.');
-      return;
-    }
+  function previousPage() {
+    changePage(-1);
+  }
 
-    setPageIsRendering(true);
-    try {
-      console.log('Rendering page', num);
-      const page = await pdfDoc.getPage(num);
-      const viewport = page.getViewport({ scale });
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      const renderCtx = {
-        canvasContext: ctx,
-        viewport: viewport
-      };
-
-      await page.render(renderCtx).promise;
-      console.log('Page rendered successfully');
-      setPageIsRendering(false);
-
-      if (pageNumIsPending !== null) {
-        renderPage(pageNumIsPending);
-        setPageNumIsPending(null);
-      }
-    } catch (error) {
-      console.error('Error rendering page:', error);
-      setPageIsRendering(false);
-    }
-  };
-
-  const queueRenderPage = (num) => {
-    if (pageIsRendering) {
-      setPageNumIsPending(num);
-    } else {
-      setPageNum(num);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (pageNum <= 1) return;
-    queueRenderPage(pageNum - 1);
-  };
-
-  const handleNextPage = () => {
-    if (pdfDoc && pageNum < pdfDoc.numPages) {
-      queueRenderPage(pageNum + 1);
-    }
-  };
-
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    const selectedText = selection.toString();
-    if (selectedText) {
-      console.log('Selected text:', selectedText);
-      // Here you can implement copying to clipboard or any other action
-    }
-  };
+  function nextPage() {
+    changePage(1);
+  }
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file && file.type === 'application/pdf') {
-      setSelectedFile(file);
+      setFile(file);
+      setError(null);
     } else {
-      alert('Please select a valid PDF file.');
+      setError('Please select a valid PDF file.');
+      setFile(null);
     }
   };
 
   return (
     <div className="pdf-viewer">
       <header className="pdf-viewer__header">
-        <h1>PDF Viewer</h1>
+        <h1>Interactive PDF Viewer</h1>
         <div className="file-input">
           <label htmlFor="file-upload" className="file-input__label">
             Choose PDF File
@@ -126,15 +69,35 @@ function App() {
         </div>
       </header>
       <main className="pdf-viewer__main">
-        <div className="canvas-container">
-          <canvas ref={canvasRef} onMouseUp={handleTextSelection}></canvas>
-        </div>
+        {error && <div className="error-message">{error}</div>}
+        {file && (
+          <Document
+            file={file}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+          >
+            {numPages > 0 && (
+              <Page
+                pageNumber={pageNumber}
+                scale={1.5}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+              />
+            )}
+          </Document>
+        )}
       </main>
       <footer className="pdf-viewer__footer">
         <div className="controls">
-          <button onClick={handlePrevPage} disabled={pageNum <= 1}>Previous</button>
-          <span className="page-info">{`Page ${pageNum} of ${pdfDoc ? pdfDoc.numPages : '--'}`}</span>
-          <button onClick={handleNextPage} disabled={!pdfDoc || pageNum >= pdfDoc.numPages}>Next</button>
+          <button onClick={previousPage} disabled={pageNumber <= 1}>
+            Previous
+          </button>
+          <p>
+            Page {pageNumber || (numPages ? 1 : '--')} of {numPages || '--'}
+          </p>
+          <button onClick={nextPage} disabled={pageNumber >= numPages}>
+            Next
+          </button>
         </div>
       </footer>
     </div>
