@@ -25,14 +25,25 @@ app.get('/api/search', async (req, res) => {
     const results = await search(searchOpts);
     console.log(`Found ${results.papers.length} results`);
 
-    const articles = results.papers.map(paper => ({
-      title: paper.title,
-      authors: paper.authors.map(author => author.name),
-      abstract: paper.description,
-      url: paper.url,
-      year: paper.year || 'N/A',
-      citations: paper.citation ? paper.citation.count : 0
-    }));
+    const articles = results.papers.map(paper => {
+      // Extract DOI from the paper URL if possible
+      const doiMatch = paper.url.match(/https?:\/\/doi\.org\/(10\.[^/]+\/[^/\s]+)/);
+      const doi = doiMatch ? doiMatch[1] : null;
+
+      // Check for PDF link
+      const pdfLink = paper.source && paper.source.type === 'pdf' ? paper.source.url : null;
+
+      return {
+        title: paper.title,
+        authors: paper.authors.map(author => author.name),
+        abstract: paper.description,
+        url: paper.url,
+        year: paper.year || 'N/A',
+        citations: paper.citation ? paper.citation.count : 0,
+        doi,
+        pdfLink
+      };
+    });
 
     res.json({
       articles,
@@ -47,4 +58,4 @@ app.get('/api/search', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Backend server running at http://localhost:${port}`);
-});
+}); 

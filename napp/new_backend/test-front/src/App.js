@@ -60,9 +60,17 @@ export default function GoogleScholarSearch() {
                 <p>Year: {article.year}</p>
                 <p>Citations: {article.citations}</p>
                 <p>Abstract: {article.abstract || 'N/A'}</p>
-                <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-                  Read More
-                </a>
+                {article.doi && <p>DOI: {article.doi}</p>}
+                <div className="mt-2">
+                  <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 mr-2">
+                    Read More
+                  </a>
+                  {article.pdfLink && (
+                    <a href={article.pdfLink} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+                      PDF
+                    </a>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
