@@ -131,3 +131,4 @@ dist
 
 #additional
 *.pdf
+.DS_Store

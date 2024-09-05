@@ -1,17 +1,27 @@
-// backend/server.js
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5001;
 
 app.use(cors());
-app.use('/pdfs', express.static(path.join(__dirname, 'pdfs')));
+
+// Serve static files from the 'pdfs' directory
+const pdfDirectory = path.join(__dirname, 'pdfs');
+
+// Ensure the 'pdfs' directory exists
+if (!fs.existsSync(pdfDirectory)){
+    fs.mkdirSync(pdfDirectory, { recursive: true });
+}
+
+app.use('/pdfs', express.static(pdfDirectory));
 
 app.get('/', (req, res) => {
-    res.send('PDF Viewer Backend');
+  res.send('PDF Viewer Backend');
 });
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });

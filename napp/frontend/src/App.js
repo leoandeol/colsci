@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Document, Page } from 'react-pdf';
 import { pdfjs } from 'react-pdf';
+import { PDFDocument, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import './App.css';
@@ -16,6 +18,23 @@ function App() {
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const [isContinuousScroll, setIsContinuousScroll] = useState(false);
+  const [annotations, setAnnotations] = useState([]);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (file) {
+      loadPdfAndAnnotations();
+    }
+  }, [file]);
+
+  async function loadPdfAndAnnotations() {
+    const pdfDoc = await PDFDocument.load(await file.arrayBuffer());
+    pdfDoc.registerFontkit(fontkit);
+    // Load existing annotations if any
+    // This is a placeholder - you'd need to implement a way to store and retrieve annotations
+    setAnnotations([]);
+  }
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -26,18 +45,6 @@ function App() {
   function onDocumentLoadError(error) {
     console.error('Error while loading document! ', error.message);
     setError(`Error: ${error.message}`);
-  }
-
-  function changePage(offset) {
-    setPageNumber(prevPageNumber => prevPageNumber + offset);
-  }
-
-  function previousPage() {
-    changePage(-1);
-  }
-
-  function nextPage() {
-    changePage(1);
   }
 
   const handleFileChange = (event) => {
@@ -55,23 +62,43 @@ function App() {
     setIsContinuousScroll(!isContinuousScroll);
   };
 
+  const toggleAnnotationMode = () => {
+    setIsAnnotating(!isAnnotating);
+  };
+
+  const handleCanvasClick = async (event) => {
+    if (!isAnnotating || !file) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const newAnnotation = { x, y, text: prompt('Enter annotation text:') };
+    setAnnotations([...annotations, newAnnotation]);
+
+    // Here you would typically save the annotation to the PDF
+    // This is a placeholder for where you'd use pdf-lib to add the annotation
+    console.log('New annotation:', newAnnotation);
+  };
+
   return (
     <div className="pdf-viewer">
       <header className="pdf-viewer__header">
-        <h2>Collaborative Science</h2>
+        <h1>Interactive PDF Viewer with Annotations</h1>
         <div className="file-input">
           <label htmlFor="file-upload" className="file-input__label">
             Choose PDF File
           </label>
-          <input
-            id="file-upload"
-            type="file"
-            accept=".pdf"
+          <input 
+            id="file-upload" 
+            type="file" 
+            accept=".pdf" 
             onChange={handleFileChange}
-      className="file-input__input"
+            className="file-input__input" 
           />
         </div>
-        <div className="scroll-mode-toggle">
+        <div className="view-controls">
           <label>
             <input
               type="checkbox"
@@ -80,9 +107,17 @@ function App() {
             />
             Continuous Scroll
           </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={isAnnotating}
+              onChange={toggleAnnotationMode}
+            />
+            Annotation Mode
+          </label>
         </div>
       </header>
-      <main className="pdf-viewer__main">
+      <main className="pdf-viewer__main" onClick={handleCanvasClick}>
         {error && <div className="error-message">{error}</div>}
         {file && (
           <Document
@@ -98,16 +133,27 @@ function App() {
                   scale={1.5}
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
+                  canvasRef={canvasRef}
                 />
               ))
             ) : (
-              <Page
-                pageNumber={pageNumber}
+              <Page 
+                pageNumber={pageNumber} 
                 scale={1.5}
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
+                canvasRef={canvasRef}
               />
             )}
+            {annotations.map((ann, index) => (
+              <div
+                key={index}
+                className="annotation"
+                style={{ left: ann.x, top: ann.y }}
+              >
+                {ann.text}
+              </div>
+            ))}
           </Document>
         )}
       </main>
@@ -115,13 +161,13 @@ function App() {
         <div className="controls">
           {!isContinuousScroll && (
             <>
-              <button onClick={previousPage} disabled={pageNumber <= 1}>
+              <button onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))} disabled={pageNumber <= 1}>
                 Previous
               </button>
               <p>
                 Page {pageNumber || (numPages ? 1 : '--')} of {numPages || '--'}
               </p>
-              <button onClick={nextPage} disabled={pageNumber >= numPages}>
+              <button onClick={() => setPageNumber(prev => Math.min(prev + 1, numPages))} disabled={pageNumber >= numPages}>
                 Next
               </button>
             </>
