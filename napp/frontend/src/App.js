@@ -1,270 +1,150 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
-import { PDFDocument, rgb, Color } from 'pdf-lib';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+import React, { useState } from 'react';
+import { PdfLoader, PdfHighlighter, Tip, Highlight, Popup, AreaHighlight } from 'react-pdf-highlighter';
 import './App.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-// pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-//   'pdfjs-dist/build/pdf.worker.min.js',
-//   import.meta.url,
-// ).toString();
+const getNextId = () => String(Math.random()).slice(2);
+
+const parseIdFromHash = () => document.location.hash.slice("#highlight-".length);
+
+const resetHash = () => { document.location.hash = ""; };
 
 function App() {
-  const [numPages, setNumPages] = useState(null);
-  const [file, setFile] = useState(null);
-  const [error, setError] = useState(null);
-  const [scale, setScale] = useState(1.5);
-  const [annotations, setAnnotations] = useState([]);
+  const [url, setUrl] = useState(null);
   const [highlights, setHighlights] = useState([]);
-  const [isAnnotating, setIsAnnotating] = useState(false);
-  const [isHighlighting, setIsHighlighting] = useState(false);
-  const [editingAnnotation, setEditingAnnotation] = useState(null);
-  const containerRef = useRef(null);
-  const pagesRef = useRef([]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = containerRef.current.scrollTop;
-      const pageHeight = containerRef.current.scrollHeight / numPages;
-      const currentPage = Math.floor(scrollPosition / pageHeight) + 1;
-      // You can use this currentPage value to update UI or perform any other actions
-    };
+  const scrollViewerTo = (highlight) => {};
 
-    containerRef.current?.addEventListener('scroll', handleScroll);
-    return () => containerRef.current?.removeEventListener('scroll', handleScroll);
-  }, [numPages]);
+  const addHighlight = (highlight) => {
+    setHighlights([{ ...highlight, id: getNextId() }, ...highlights]);
+  };
 
-  function onDocumentLoadSuccess({ numPages }) {
-    setNumPages(numPages);
-    setError(null);
-  }
-
-  function onDocumentLoadError(error) {
-    console.error('Error while loading document! ', error.message);
-    setError(`Error: ${error.message}`);
-  }
+  const updateHighlight = (highlightId, position, content) => {
+    setHighlights(
+      highlights.map((h) => {
+        const {
+          id,
+          position: originalPosition,
+          content: originalContent,
+          ...rest
+        } = h;
+        return id === highlightId
+          ? {
+              id,
+              position: { ...originalPosition, ...position },
+              content: { ...originalContent, ...content },
+              ...rest,
+            }
+          : h;
+      })
+    );
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file && file.type === 'application/pdf') {
-      setFile(file);
-      setError(null);
-      setAnnotations([]);
-      setHighlights([]);
+      setUrl(URL.createObjectURL(file));
     } else {
-      setError('Please select a valid PDF file.');
-      setFile(null);
+      alert('Please select a valid PDF file.');
     }
   };
-
-  const toggleAnnotationMode = () => {
-    setIsAnnotating(!isAnnotating);
-    setIsHighlighting(false);
-  };
-
-  const toggleHighlightMode = () => {
-    setIsHighlighting(!isHighlighting);
-    setIsAnnotating(false);
-  };
-
-  const handleAnnotation = (event) => {
-    if (!isAnnotating || !containerRef.current) return;
-
-    const container = containerRef.current;
-    const rect = container.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / scale;
-    const y = (event.clientY - rect.top) / scale;
-
-    const text = prompt('Enter annotation text:');
-    if (text) {
-      const newAnnotation = { x, y, text, page: getCurrentPage() };
-      setAnnotations([...annotations, newAnnotation]);
-    }
-  };
-
-  const handleHighlight = () => {
-    if (!isHighlighting) return;
-
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    const container = containerRef.current.getBoundingClientRect();
-
-    const highlight = {
-      x: (rect.left - container.left) / scale,
-      y: (rect.top - container.top) / scale,
-      width: rect.width / scale,
-      height: rect.height / scale,
-      text: selection.toString(),
-      page: getCurrentPage()
-    };
-
-    setHighlights([...highlights, highlight]);
-    selection.removeAllRanges();
-  };
-
-  const getCurrentPage = () => {
-    const scrollPosition = containerRef.current.scrollTop;
-    const pageHeight = containerRef.current.scrollHeight / numPages;
-    return Math.floor(scrollPosition / pageHeight) + 1;
-  };
-
-  const editAnnotation = (index) => {
-    setEditingAnnotation(index);
-  };
-
-  const updateAnnotation = (index, newText) => {
-    const updatedAnnotations = [...annotations];
-    updatedAnnotations[index].text = newText;
-    setAnnotations(updatedAnnotations);
-    setEditingAnnotation(null);
-  };
-
-  const saveAnnotations = async () => {
-    if (!file) return;
-
-    const existingPdfBytes = await file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(existingPdfBytes);
-
-    const pages = pdfDoc.getPages();
-
-    // Calculate the overall scale factor
-    const firstPage = pages[0];
-    const { width: pdfWidth, height: pdfHeight } = firstPage.getSize();
-    const displayWidth = containerRef.current.clientWidth;
-    const displayHeight = containerRef.current.clientHeight;
-    const scaleX = pdfWidth / displayWidth;
-    const scaleY = pdfHeight / displayHeight;
-    const scaleFactor = Math.max(scaleX, scaleY);
-
-    // Calculate horizontal offset
-    const horizontalOffset = (pdfWidth - (displayWidth * scaleFactor)) / 2;
-
-    annotations.forEach(ann => {
-      const page = pages[ann.page - 1];
-      const { height } = page.getSize();
-
-      page.drawText(ann.text, {
-        x: (ann.x * scaleFactor) - horizontalOffset,
-        y: height - (ann.y * scaleFactor) - 12 * scaleFactor, // Adjust for text height
-        size: 12 * scaleFactor,
-        color: rgb(0, 0, 0), // Black color for text
-      });
-    });
-
-    highlights.forEach(hl => {
-      const page = pages[hl.page - 1];
-      const { height } = page.getSize();
-
-      page.drawRectangle({
-        x: (hl.x * scaleFactor) - horizontalOffset,
-        y: height - ((hl.y + hl.height) * scaleFactor),
-        width: hl.width * scaleFactor,
-        height: hl.height * scaleFactor,
-        color: rgb(1, 1, 0),
-        opacity: 0.2,
-      });
-    });
-
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'annotated_document.pdf';
-    link.click();
-  };
-
 
   return (
-    <div className="pdf-viewer">
-      <header className="pdf-viewer__header">
-        <h1>Interactive PDF Viewer with Annotations and Highlights</h1>
-        <div className="file-input">
-          <label htmlFor="file-upload" className="file-input__label">
-            Choose PDF File
-          </label>
-          <input 
-            id="file-upload" 
-            type="file" 
-            accept=".pdf" 
-            onChange={handleFileChange}
-            className="file-input__input" 
-          />
-        </div>
-        <div className="controls">
-          <button onClick={toggleAnnotationMode}>
-            {isAnnotating ? 'Disable Annotation' : 'Enable Annotation'}
-          </button>
-          <button onClick={toggleHighlightMode}>
-            {isHighlighting ? 'Disable Highlighting' : 'Enable Highlighting'}
-          </button>
-          <button onClick={() => setScale(scale + 0.2)}>Zoom In</button>
-          <button onClick={() => setScale(Math.max(0.5, scale - 0.2))}>Zoom Out</button>
-          <button onClick={saveAnnotations}>Save Annotations</button>
-        </div>
-      </header>
-      <main className="pdf-viewer__main" ref={containerRef} onClick={handleAnnotation} onMouseUp={handleHighlight}>
-        {error && <div className="error-message">{error}</div>}
-        {file && (
-          <Document
-            file={file}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-          >
-            {Array.from(new Array(numPages), (el, index) => (
-              <Page 
-                key={`page_${index + 1}`}
-                pageNumber={index + 1} 
-                scale={scale}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                inputRef={(ref) => (pagesRef.current[index] = ref)}
-              />
-            ))}
-            {annotations.map((ann, index) => (
-              <div
-                key={index}
-                className="annotation"
-                style={{ 
-                  left: `${ann.x * scale}px`, 
-                  top: `${ann.y * scale}px`,
-                  transform: `scale(${scale})`
+    <div className="App">
+      <div className="header">
+        <h1>PDF Annotator</h1>
+        <label htmlFor="file-upload" className="file-input__label">
+          Select PDF
+        </label>
+        <input id="file-upload" type="file" onChange={handleFileChange} accept=".pdf" className="file-input__input" />
+      </div>
+      {url ? (
+        <div style={{ position: 'absolute', top: 120, left: 0, right: 0, bottom: 0, overflow: 'auto' }}>
+          <PdfLoader url={url} beforeLoad={<div>Loading...</div>}>
+            {(pdfDocument) => (
+              <PdfHighlighter
+                pdfDocument={pdfDocument}
+                enableAreaSelection={(event) => event.altKey}
+                onScrollChange={resetHash}
+                scrollRef={(scrollTo) => {
+                  scrollViewerTo(scrollTo);
                 }}
-                onClick={() => editAnnotation(index)}
-              >
-                {editingAnnotation === index ? (
-                  <input
-                    type="text"
-                    value={ann.text}
-                    onChange={(e) => updateAnnotation(index, e.target.value)}
-                    onBlur={() => setEditingAnnotation(null)}
-                    autoFocus
+                onSelectionFinished={(
+                  position,
+                  content,
+                  hideTipAndSelection,
+                  transformSelection
+                ) => (
+                  <Tip
+                    onOpen={transformSelection}
+                    onConfirm={(comment) => {
+                      addHighlight({ content, position, comment });
+                      hideTipAndSelection();
+                    }}
                   />
-                ) : (
-                  ann.text
                 )}
-              </div>
-            ))}
-            {highlights.map((hl, index) => (
-              <div
-                key={`highlight_${index}`}
-                className="highlight"
-                style={{
-                  position: 'absolute',
-                  left: `${hl.x * scale}px`,
-                  top: `${hl.y * scale}px`,
-                  width: `${hl.width * scale}px`,
-                  height: `${hl.height * scale}px`,
-                  backgroundColor: 'rgba(255, 255, 0, 0.3)',
-                  pointerEvents: 'none',
+                highlightTransform={(
+                  highlight,
+                  index,
+                  setTip,
+                  hideTip,
+                  viewportToScaled,
+                  screenshot,
+                  isScrolledTo
+                ) => {
+                  const isTextHighlight = !Boolean(
+                    highlight.content && highlight.content.image
+                  );
+
+                  const component = isTextHighlight ? (
+                    <Highlight
+                      isScrolledTo={isScrolledTo}
+                      position={highlight.position}
+                      comment={highlight.comment}
+                    />
+                  ) : (
+                    <AreaHighlight
+                      isScrolledTo={isScrolledTo}
+                      highlight={highlight}
+                      onChange={(boundingRect) => {
+                        updateHighlight(
+                          highlight.id,
+                          { boundingRect: viewportToScaled(boundingRect) },
+                          { image: screenshot(boundingRect) }
+                        );
+                      }}
+                    />
+                  );
+
+                  return (
+                    <Popup
+                      popupContent={<HighlightPopup {...highlight} />}
+                      onMouseOver={(popupContent) =>
+                        setTip(highlight, (highlight) => popupContent)
+                      }
+                      onMouseOut={hideTip}
+                      key={index}
+                      children={component}
+                    />
+                  );
                 }}
+                highlights={highlights}
               />
-            ))}
-          </Document>
-        )}
-      </main>
+            )}
+          </PdfLoader>
+        </div>
+      ) : (
+        <div>No PDF file selected</div>
+      )}
+    </div>
+  );
+}
+
+function HighlightPopup({ comment }) {
+  return (
+    <div className="Highlight__popup">
+      {comment ? (
+        <div className="Highlight__comment">{comment}</div>
+      ) : null}
     </div>
   );
 }
