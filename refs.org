@@ -1,0 +1,22 @@
+#+TITLE: References for libraries/packages to use
+#+AUTHOR: Léo Andéol
+
+* PDF Management
+ 1. [JS] Ideal: https://www.npmjs.com/package/@mescius/dspdfviewer
+ 2. https://developer.mescius.com/blogs/programmatically-use-comments-on-pdf-with-javascript-pdf-viewer
+ 3. https://www.npmjs.com/package/@grapecity/gcpdfviewer
+ 4. https://github.com/dannyedel/dspdfviewer
+ 5. https://www.npmjs.com/package/pdfkit
+ 6. [Python][OLD] https://github.com/plangrid/pdf-annotate
+ 7. [Python/Manager] https://github.com/py-pdf/pypdf
+ 8. [Python/Viewer] https://thepythoncode.com/article/make-pdf-viewer-with-tktinter-in-python
+ 9. [Python/Viewer] Fitz, pymupdf
+
+* Getting Bibs
+ 1. https://www.doi2bib.org/
+ 2. https://serpapi.com/google-scholar-cite-api
+
+* Getting Papers
+ 1. [PAY] https://serpapi.com/google-scholar-api (100 free per month)
+ 2. [FREE/Python] https://github.com/scholarly-python-package/scholarly
+ 3.

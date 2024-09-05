@@ -5,7 +5,6 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import './App.css';
 
-// Set worker path
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.js',
   import.meta.url,
@@ -16,6 +15,7 @@ function App() {
   const [pageNumber, setPageNumber] = useState(1);
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
+  const [isContinuousScroll, setIsContinuousScroll] = useState(false);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -51,10 +51,14 @@ function App() {
     }
   };
 
+  const toggleScrollMode = () => {
+    setIsContinuousScroll(!isContinuousScroll);
+  };
+
   return (
     <div className="pdf-viewer">
       <header className="pdf-viewer__header">
-        <h1>Interactive PDF Viewer</h1>
+        <h2>Collaborative Science</h2>
         <div className="file-input">
           <label htmlFor="file-upload" className="file-input__label">
             Choose PDF File
@@ -64,8 +68,18 @@ function App() {
             type="file"
             accept=".pdf"
             onChange={handleFileChange}
-            className="file-input__input"
+      className="file-input__input"
           />
+        </div>
+        <div className="scroll-mode-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={isContinuousScroll}
+              onChange={toggleScrollMode}
+            />
+            Continuous Scroll
+          </label>
         </div>
       </header>
       <main className="pdf-viewer__main">
@@ -76,7 +90,17 @@ function App() {
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
           >
-            {numPages > 0 && (
+            {isContinuousScroll ? (
+              Array.from(new Array(numPages), (el, index) => (
+                <Page
+                  key={`page_${index + 1}`}
+                  pageNumber={index + 1}
+                  scale={1.5}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                />
+              ))
+            ) : (
               <Page
                 pageNumber={pageNumber}
                 scale={1.5}
@@ -89,15 +113,19 @@ function App() {
       </main>
       <footer className="pdf-viewer__footer">
         <div className="controls">
-          <button onClick={previousPage} disabled={pageNumber <= 1}>
-            Previous
-          </button>
-          <p>
-            Page {pageNumber || (numPages ? 1 : '--')} of {numPages || '--'}
-          </p>
-          <button onClick={nextPage} disabled={pageNumber >= numPages}>
-            Next
-          </button>
+          {!isContinuousScroll && (
+            <>
+              <button onClick={previousPage} disabled={pageNumber <= 1}>
+                Previous
+              </button>
+              <p>
+                Page {pageNumber || (numPages ? 1 : '--')} of {numPages || '--'}
+              </p>
+              <button onClick={nextPage} disabled={pageNumber >= numPages}>
+                Next
+              </button>
+            </>
+          )}
         </div>
       </footer>
     </div>
