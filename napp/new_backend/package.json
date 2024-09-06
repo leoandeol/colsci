@@ -15,7 +15,9 @@
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "create-react-app": "^5.0.1",
+    "doi2bib": "^1.0.10",
     "express": "^4.19.2",
-    "scholarly": "^1.1.1"
+    "scholarly": "^1.1.1",
+    "xml2js": "^0.6.2"
   }
 }
