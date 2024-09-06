@@ -3,10 +3,19 @@ const cors = require('cors');
 const { search } = require('@rpidanny/google-scholar');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = 3001;
 
 app.use(cors());
 app.use(express.json());
+
+function extractPaperId(relatedArticlesUrl) {
+  const match = relatedArticlesUrl.match(/related:(.*?):scholar/);
+  return match ? match[1] : null;
+}
+
+function generateCitationUrl(paperId) {
+  return `https://scholar.google.com/scholar?q=info:${paperId}:scholar.google.com/&output=cite&scirp=0&hl=en`;
+}
 
 app.get('/api/search', async (req, res) => {
   const query = req.query.q;
@@ -26,14 +35,18 @@ app.get('/api/search', async (req, res) => {
     console.log(`Found ${results.papers.length} results`);
 
     const articles = results.papers.map(paper => {
-      // Extract DOI from the paper URL if possible
+      console.log('Processing paper:', paper.title);
       const doiMatch = paper.url.match(/https?:\/\/doi\.org\/(10\.[^/]+\/[^/\s]+)/);
       const doi = doiMatch ? doiMatch[1] : null;
-
-      // Check for PDF link
+      const paperId = extractPaperId(paper.relatedArticlesUrl);
       const pdfLink = paper.source && paper.source.type === 'pdf' ? paper.source.url : null;
+      const citationUrl = generateCitationUrl(paperId);
+
+      console.log('Paper ID:', paperId);
+      console.log('Generated Citation URL:', citationUrl);
 
       return {
+        id: paperId,
         title: paper.title,
         authors: paper.authors.map(author => author.name),
         abstract: paper.description,
@@ -41,10 +54,12 @@ app.get('/api/search', async (req, res) => {
         year: paper.year || 'N/A',
         citations: paper.citation ? paper.citation.count : 0,
         doi,
+        citationUrl,
         pdfLink
       };
     });
 
+    console.log('Sending response with articles:', articles.length);
     res.json({
       articles,
       totalResults: results.totalPapers,
@@ -58,4 +73,4 @@ app.get('/api/search', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Backend server running at http://localhost:${port}`);
-}); 
+});

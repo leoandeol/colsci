@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function GoogleScholarSearch() {
   const [query, setQuery] = useState('');
@@ -13,6 +13,7 @@ export default function GoogleScholarSearch() {
     setLoading(true);
     setError(null);
     try {
+      console.log('Sending search request for:', query);
       const response = await fetch(`http://localhost:3001/api/search?q=${encodeURIComponent(query)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -21,9 +22,10 @@ export default function GoogleScholarSearch() {
       if (data.error) {
         throw new Error(data.error);
       }
+      console.log('Received data:', data);
       setArticles(data.articles);
       setTotalResults(data.totalResults);
-      setNextPageUrl(data.nextPageUrl);
+      setNextPageUrl(data.nextUrl);
     } catch (error) {
       console.error('Error fetching articles:', error);
       setError(error.message);
@@ -31,6 +33,33 @@ export default function GoogleScholarSearch() {
       setLoading(false);
     }
   };
+
+  const fetchBibTeX = async (citationUrl) => {
+    try {
+      console.log('Fetching BibTeX from:', citationUrl);
+      const response = await fetch(citationUrl);
+      const text = await response.text();
+      const parser = new DOMParser();
+      const htmlDoc = parser.parseFromString(text, 'text/html');
+      const bibTeXLink = htmlDoc.querySelector('a.gs_citi[href*="scholar.bib"]');
+      if (bibTeXLink) {
+        console.log('Final BibTeX link:', bibTeXLink.href);
+        return bibTeXLink.href;
+      }
+      console.error('BibTeX link not found in citation page');
+      return null;
+    } catch (error) {
+      console.error('Error fetching BibTeX:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    console.log('Articles state updated:', articles);
+    articles.forEach(article => {
+      console.log(`Paper ID: ${article.id}, Title: ${article.title}, Citation URL: ${article.citationUrl}`);
+    });
+  }, [articles]);
 
   return (
     <div className="container mx-auto p-4">
@@ -66,9 +95,26 @@ export default function GoogleScholarSearch() {
                     Read More
                   </a>
                   {article.pdfLink && (
-                    <a href={article.pdfLink} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+                    <a href={article.pdfLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 mr-2">
                       PDF
                     </a>
+                  )}
+                  {article.citationUrl && (
+                    <button
+                      onClick={async () => {
+                        const bibTeXLink = await fetchBibTeX(article.citationUrl);
+                        if (bibTeXLink) {
+                          console.log(`BibTeX link for "${article.title}":`, bibTeXLink);
+                          window.open(bibTeXLink, '_blank');
+                        } else {
+                          console.error(`BibTeX link not found for "${article.title}"`);
+                          alert('BibTeX link not found');
+                        }
+                      }}
+                      className="text-green-500"
+                    >
+                      BibTeX
+                    </button>
                   )}
                 </div>
               </li>
