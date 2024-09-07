@@ -1,0 +1,1 @@
+declare module 'react-pdf-highlighter/dist/components/*.js';

@@ -1,0 +1,124 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  background-color: #ffffff;
+  color: #fff;
+}
+
+.Tip {
+  color: black;
+  outline-color: purple;
+  border-color: purple;
+  background-color: purple;
+}
+
+.sidebar {
+  overflow: auto;
+  color: rgb(119, 119, 119);
+  background: linear-gradient(
+    rgb(249, 248, 247),
+    rgb(251, 250, 248) 46px,
+    rgb(251, 251, 249) 120px,
+    rgb(248, 247, 245) 35%,
+    rgb(249, 248, 246)
+  );
+}
+
+.sidebar__highlights {
+  list-style: "none";
+  padding: 0;
+}
+
+.highlight__location {
+  margin-top: 0.5rem;
+  text-align: right;
+  font-size: 10px;
+}
+
+.highlight__image {
+  overflow: auto;
+  max-width: 300px;
+  border: 1px dashed;
+}
+
+.sidebar__highlight {
+  padding: 1rem;
+  cursor: pointer;
+  transition: background 140ms ease-in;
+  border-bottom: 1px solid rgb(119, 119, 119);
+}
+
+.sidebar__highlight:hover {
+  background: rgba(58, 56, 52, 0.08);
+}
+
+a {
+  color: #d35400;
+}
+
+blockquote {
+  padding: 0;
+  margin: 0;
+  quotes: "\201c" "\201d";
+}
+blockquote:before {
+  content: open-quote;
+}
+blockquote:after {
+  content: close-quote;
+}
+
+/* Custom styles for PDF highlighter */
+.Highlight__part {
+  opacity: 1;
+  background-color: #ff0;
+  transition: background 0.3s;
+}
+
+.Highlight__popup {
+  background-color: #3d4852;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 3px;
+  max-width: 300px;
+  font-size: 0.8rem;
+}
+
+.Highlight__popup::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #3d4852;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
