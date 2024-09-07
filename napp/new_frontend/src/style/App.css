@@ -18,6 +18,19 @@ body {
   background-color: purple;
 }
 
+form.Tip__card div:nth-child(2) input {
+  color: black;
+  outline: 0px solid lightgray;
+  border-radius: 4px; 
+  box-shadow: 0 2px 4px rgba(37, 40, 43, 0.2);
+  padding: 0px 3px;
+}
+
+form.Tip__card div div:last-child input {
+  color: black;
+  outline:  none;
+}
+
 .sidebar {
   overflow: auto;
   color: rgb(119, 119, 119);
