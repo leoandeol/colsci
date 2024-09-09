@@ -9,12 +9,32 @@ interface Article {
   type: string;
   doi?: string;
   url?: string;
-  bibtexUrl?: string;
+  bibtex?: string;
   pdfLink?: string;
 }
 
-export const DBLPSearch: React.FC = () => {
+const hosts = [
+  {
+    name: 'DBLP',
+    code: 'dblp',
+  },
+  {
+    name: 'Google Scholar',
+    code: 'google_scholar',
+  },
+  {
+    name: 'Semantic Scholar',
+    code: 'semantic_scholar',
+  },
+  {
+    name: "arXiv",
+    code: 'arxiv',
+  }
+];
+
+export const Search: React.FC = () => {
   const [query, setQuery] = useState('');
+  const [queryHost, setQueryHost] = useState(hosts[0].code);
   const [articles, setArticles] = useState<Article[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -25,7 +45,7 @@ export const DBLPSearch: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:3001/api/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`http://localhost:3001/api/search?q=${encodeURIComponent(query)}&host=${encodeURIComponent(queryHost)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -68,6 +88,15 @@ export const DBLPSearch: React.FC = () => {
         <div className="px-4 py-5 sm:p-6">
           <form onSubmit={handleSearch} className="mb-8">
             <div className="mt-1 relative rounded-md shadow-sm">
+              <label htmlFor="host-select">Host:</label>
+              <select name="search_host" id="host-select" 
+                onChange={(e) => setQueryHost(e.target.value)}
+              >
+                  { hosts.map(
+                    (host) => (
+                      <option key={host.name} value={host.code}>{host.name}</option>
+                    ))}
+              </select>
               <input
                 type="text"
                 value={query}
@@ -126,10 +155,13 @@ export const DBLPSearch: React.FC = () => {
                           Read More
                         </a>
                       )}
-                      {article.bibtexUrl && (
-                        <a href={article.bibtexUrl} target="_blank" rel="noopener noreferrer" className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                      {article.bibtex && (
+                        <button
+                          onClick={() => alert(article.bibtex)}
+                          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
                           BibTeX
-                        </a>
+                        </button>
                       )}
                       {article.pdfLink && (
                         <a href={article.pdfLink} target="_blank" rel="noopener noreferrer" className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">

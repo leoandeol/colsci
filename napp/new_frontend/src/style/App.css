@@ -135,3 +135,12 @@ blockquote:after {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Custom styles for PDF highlighter */
+input {
+  color: black;
+  outline: 0px solid lightgray;
+  border-radius: 4px; 
+  box-shadow: 0 2px 4px rgba(37, 40, 43, 0.2);
+  padding: 0px 3px;
+}
