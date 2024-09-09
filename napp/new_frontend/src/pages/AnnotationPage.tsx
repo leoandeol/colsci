@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   AreaHighlight,
   Highlight,
@@ -13,6 +13,18 @@ import { Sidebar } from "../components/Sidebar";
 import { Spinner } from "../components/Spinner";
 import '../utils/pdfjs-init';
 
+interface PdfFile {
+  url: string;
+  title: string;
+  authors?: string[];
+}
+
+interface ApiPdfResponse {
+  url: string;
+  title: string;
+  authors?: string[];
+}
+
 const HighlightPopup = ({
   comment,
 }: {
@@ -25,19 +37,46 @@ const HighlightPopup = ({
   ) : null;
 
 const AnnotationPage: React.FC = () => {
-  const [url, setUrl] = useState("https://arxiv.org/pdf/1708.08021.pdf");
+  const [currentFile, setCurrentFile] = useState<PdfFile>({
+    url: "https://arxiv.org/pdf/1708.08021.pdf",
+    title: "Default PDF"
+  });
   const [highlights, setHighlights] = useState<Array<IHighlight>>([]);
   const [error, setError] = useState<string | null>(null);
+  const [availableFiles, setAvailableFiles] = useState<PdfFile[]>([]);
   const scrollViewerToRef = useRef<(highlight: IHighlight) => void>(() => {});
+
+  useEffect(() => {
+    fetch('http://localhost:3001/api/available-pdfs')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+      })
+      .then(text => {
+        console.log('Raw response:', text);
+        return JSON.parse(text) as ApiPdfResponse[];
+      })
+      .then(pdfs => {
+        const files = pdfs.map((pdf: ApiPdfResponse) => ({
+          url: `http://localhost:3001${pdf.url}`,
+          title: pdf.title,
+          authors: pdf.authors
+        }));
+        setAvailableFiles(files);
+        if (files.length > 0) {
+          setCurrentFile(files[0]);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching available PDFs:", error);
+        setError(`Error fetching available PDFs: ${error.message}`);
+      });
+  }, []);
 
   const resetHighlights = () => {
     setHighlights([]);
-  };
-
-  const toggleDocument = () => {
-    setUrl(url === "https://arxiv.org/pdf/1708.08021.pdf" 
-      ? "https://arxiv.org/pdf/1604.02480.pdf"
-      : "https://arxiv.org/pdf/1708.08021.pdf");
   };
 
   const addHighlight = (highlight: NewHighlight) => {
@@ -63,11 +102,18 @@ const AnnotationPage: React.FC = () => {
       <Sidebar
         highlights={highlights}
         resetHighlights={resetHighlights}
-        toggleDocument={toggleDocument}
+        availableFiles={availableFiles}
+        currentFile={currentFile.url}
+        onFileChange={(url) => {
+          const newFile = availableFiles.find(file => file.url === url);
+          if (newFile) {
+            setCurrentFile(newFile);
+          }
+        }}
       />
       <div className="w-3/4 relative">
         <PdfLoader 
-          url={url} 
+          url={currentFile.url} 
           beforeLoad={<Spinner />}
           onError={(error: Error) => {
             console.error("Error loading PDF:", error);
@@ -150,7 +196,7 @@ const AnnotationPage: React.FC = () => {
         </PdfLoader>
         {error && (
           <div className="text-red-500 p-4">
-            Error loading PDF: {error}
+            Error: {error}
           </div>
         )}
       </div>

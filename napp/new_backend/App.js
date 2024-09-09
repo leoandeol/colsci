@@ -106,6 +106,50 @@ app.post('/api/save', async (req, res) => {
   }
 });
 
+app.get('/api/available-pdfs', async (req, res) => {
+  try {
+    const savedArticlesPath = path.join(__dirname, 'saved_articles');
+    const entries = await fs.readdir(savedArticlesPath, { withFileTypes: true });
+    
+    const folders = entries.filter(entry => entry.isDirectory()).map(entry => entry.name);
+    
+    const pdfFiles = await Promise.all(folders.map(async (folder) => {
+      try {
+        const folderPath = path.join(savedArticlesPath, folder);
+        const files = await fs.readdir(folderPath);
+        if (files.includes('paper.pdf')) {
+          const infoFilePath = path.join(folderPath, 'info.json');
+          const infoFileExists = await fs.access(infoFilePath).then(() => true).catch(() => false);
+          
+          if (infoFileExists) {
+            const infoFile = await fs.readFile(infoFilePath, 'utf-8');
+            const info = JSON.parse(infoFile);
+            return {
+              url: `/api/pdf/${folder}/paper.pdf`,
+              title: info.title || 'Untitled',
+              authors: info.authors || []
+            };
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing folder ${folder}:`, error);
+      }
+      return null;
+    }));
+
+    const availablePdfs = pdfFiles.filter(pdf => pdf !== null);
+    console.log('Available PDFs:', JSON.stringify(availablePdfs, null, 2));
+    res.json(availablePdfs);
+  } catch (error) {
+    console.error('Error listing available PDFs:', error);
+    res.status(500).json({ error: 'An error occurred while listing available PDFs', details: error.message });
+  }
+});
+
+
+// Serve PDF files
+app.use('/api/pdf', express.static(path.join(__dirname, 'saved_articles')));
+
 app.listen(port, () => {
   console.log(`Backend server running at http://localhost:${port}`);
 });

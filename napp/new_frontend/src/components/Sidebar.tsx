@@ -1,10 +1,18 @@
 import React from "react";
 import type { IHighlight } from '../utils/pdf-highlighter';
 
+interface PdfFile {
+  url: string;
+  title: string;
+  authors?: string[];
+}
+
 interface Props {
   highlights: Array<IHighlight>;
   resetHighlights: () => void;
-  toggleDocument: () => void;
+  availableFiles: PdfFile[];
+  currentFile: string;
+  onFileChange: (file: string) => void;
 }
 
 const updateHash = (highlight: IHighlight) => {
@@ -16,22 +24,17 @@ const APP_VERSION = process.env.REACT_APP_VERSION || 'dev';
 
 export function Sidebar({
   highlights,
-  toggleDocument,
   resetHighlights,
+  availableFiles,
+  currentFile,
+  onFileChange,
 }: Props) {
   return (
     <div className="sidebar" style={{ width: "25vw" }}>
       <div className="description" style={{ padding: "1rem" }}>
         <h2 style={{ marginBottom: "1rem" }}>
-          react-pdf-highlighter {APP_VERSION}
+          Leo's Epic PDF Highlighter v{APP_VERSION}
         </h2>
-
-        <p style={{ fontSize: "0.7rem" }}>
-          <a href="https://github.com/agentcooper/react-pdf-highlighter">
-            Open in GitHub
-          </a>
-        </p>
-
         <p>
           <small>
             To create area highlight hold ⌥ Option key (Alt), then click and
@@ -39,11 +42,22 @@ export function Sidebar({
           </small>
         </p>
       </div>
-
+      <div style={{ padding: "1rem" }}>
+        <select
+          value={currentFile}
+          onChange={(e) => onFileChange(e.target.value)}
+          className="block w-full p-2 border border-gray-300 rounded-md"
+        >
+          {availableFiles.map((file, index) => (
+            <option key={index} value={file.url}>
+              {file.title}
+            </option>
+          ))}
+        </select>
+      </div>
       <ul className="sidebar__highlights">
         {highlights.map((highlight, index) => (
           <li
-            // biome-ignore lint/suspicious/noArrayIndexKey: This is an example app
             key={index}
             className="sidebar__highlight"
             onClick={() => {
@@ -72,11 +86,6 @@ export function Sidebar({
           </li>
         ))}
       </ul>
-      <div style={{ padding: "1rem" }}>
-        <button type="button" onClick={toggleDocument}>
-          Toggle PDF document
-        </button>
-      </div>
       {highlights.length > 0 ? (
         <div style={{ padding: "1rem" }}>
           <button type="button" onClick={resetHighlights}>

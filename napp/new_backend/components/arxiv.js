@@ -18,6 +18,21 @@ async function search(query) {
     //console.debug('Results:', results);
 
     const get_doi = (url) => {
+      //console.log(url);
+      if (!url.includes
+        ('arxiv.org')) {
+        console.error('Invalid arXiv URL');
+        return null;
+      }
+      // check if format is xxxx.xxxxx
+      //console.log(url.split('/').pop().split('.'));
+      const format = url.split('/').pop().split('.').length;
+      const correct_format = format === 2;
+      if(!correct_format){
+        //console.log("Url format is not xxxx.xxxxx, it is ", url.split('/').pop().split('.').length);
+        console.error('Invalid arXiv URL format for arXiv DOI');
+        return null;
+      }
       const arxiv_id = url.split('/').pop();
       const arxiv_id_filtered = arxiv_id.split('v')[0];
       return `10.48550/arXiv.${arxiv_id_filtered}`;
@@ -25,15 +40,19 @@ async function search(query) {
 
     const articles = await Promise.all(results.map(async (paper) => {
       const doi = get_doi(paper.id);
-      let bibtexUrl = null;
+      let bibtex = null;
 
-      try {
-        const citation = await doi2bib.getCitation(doi);
-        bibtex = citation;//.bibtex;
-        //console.log(bibtex);
-        //bibtexUrl = citation.bibtex;
-      } catch (error) {
-        console.error(`Error fetching BibTeX for DOI ${doi}:`, error);
+      if (!doi) {
+        console.error(`Invalid DOI for arXiv paper: ${paper.id}`);
+      } else {
+        try {
+          const citation = await doi2bib.getCitation(doi);
+          bibtex = citation;//.bibtex;
+          //console.log(bibtex);
+          //bibtexUrl = citation.bibtex;
+        } catch (error) {
+          console.error(`Error fetching BibTeX for DOI ${doi}:`, error);
+        }
       }
 
       return {
